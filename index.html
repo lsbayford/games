@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Games</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:#14121f;color:#fff;min-height:100vh}
+h1{text-align:center;margin:0;padding:28px 12px 8px;font-size:2rem}
+.sub{text-align:center;color:#a9a6c4;margin-bottom:20px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;max-width:800px;margin:0 auto;padding:16px}
+.card{background:#231f3a;border:2px solid #3a3560;border-radius:16px;padding:22px 10px;text-align:center;cursor:pointer;transition:.15s}
+.card:hover{transform:translateY(-4px);border-color:#ff5c7a}
+.card .ic{font-size:3.5rem}.card .nm{margin-top:8px;font-weight:600}
+#game{display:none;max-width:700px;margin:0 auto;padding:10px;text-align:center}
+#back{background:#231f3a;color:#fff;border:2px solid #3a3560;border-radius:10px;padding:8px 14px;cursor:pointer;margin-bottom:8px}
+canvas{width:100%;max-width:660px;background:#2b2450;border-radius:12px;touch-action:none}
+.ctl{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.ctl button{font-size:1.1rem;padding:14px 18px;border-radius:12px;border:0;background:#ff5c7a;color:#fff;user-select:none;touch-action:none}
+.hint{color:#a9a6c4;font-size:.85rem;margin-top:8px}
+</style></head><body>
+<div id="home"><h1>🎮 My Games</h1><div class="sub">Pick a game</div><div id="grid"></div></div>
+<div id="game"><button id="back">← Home</button><div id="root"></div></div>
+<script>
+// ===== Registry: add new games here (name + icon appear on the home page) =====
+const GAMES=[{id:'boxing',name:'Monster Boxing',icon:'🥊',start:startBoxing}];
+
+const grid=document.getElementById('grid'),home=document.getElementById('home'),gameEl=document.getElementById('game'),root=document.getElementById('root');
+GAMES.forEach(g=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<div class="ic">${g.icon}</div><div class="nm">${g.name}</div>`;d.onclick=()=>location.hash=g.id;grid.appendChild(d)});
+document.getElementById('back').onclick=()=>location.hash='';
+let stop=null;
+function route(){
+  if(stop){stop();stop=null}root.innerHTML='';
+  const g=GAMES.find(x=>x.id===location.hash.slice(1));
+  home.style.display=g?'none':'block';gameEl.style.display=g?'block':'none';
+  if(g)stop=g.start(root);
+}
+addEventListener('hashchange',route);route();
+
+// ===== Monster Boxing =====
+function startBoxing(root){
+  root.innerHTML=`<canvas width="660" height="360"></canvas>
+  <div class="ctl"><button data-k="left">◀</button><button data-k="right">▶</button><button data-k="jab">Jab</button><button data-k="hook">Hook</button><button data-k="block">Block</button></div>
+  <div class="hint">Keys: ←/→ or A/D move · J jab · K hook (strong, slow) · L or Space block · Enter start/continue</div>`;
+  const cv=root.querySelector('canvas'),c=cv.getContext('2d');
+  const foes=[['👾','Gloop',.9,1400],['👹','Ogre Ned',1.1,1000],['🐲','Drako',1.35,700]];
+  const ATK={jab:{dur:300,hit:120,rng:95,dmg:6},hook:{dur:600,hit:340,rng:110,dmg:14}};
+  let P,E,round=0,wins=[0,0],state='title',msg='Monster Boxing\nPress Enter or tap to start',keys={},last=performance.now(),raf;
+  const mk=(x,face,emoji,spd)=>({x,face,emoji,spd,hp:100,atk:null,stun:0,cd:0,block:false,ai:0,dir:0});
+  function newRound(){const f=foes[round];P=mk(170,1,'🧌',.22);E=mk(490,-1,f[0],.16*f[2]);E.react=f[3];state='fight';msg=`Round ${round+1}: ${f[1]}!`;setTimeout(()=>{if(state==='fight')msg=''},1200)}
+  function attack(f,t){if(f.atk||f.stun>0||f.cd>0||f.block)return;f.atk={t,ms:0,hit:false}}
+  function resolve(f,o){
+    const a=ATK[f.atk.t];f.atk.hit=true;
+    if(Math.abs(f.x-o.x)>a.rng||o.stun>0&&o.hp<=0)return;
+    const d=o.block&&!o.atk?Math.ceil(a.dmg*.15):a.dmg;
+    o.hp=Math.max(0,o.hp-d);o.x+=f.face*(o.block?6:22);
+    if(!o.block){o.stun=a.dmg>10?450:250;o.atk=null}
+  }
+  function step(f,o,dt,isP){
+    f.stun-=dt;f.cd-=dt;
+    if(f.atk){f.atk.ms+=dt;const a=ATK[f.atk.t];if(!f.atk.hit&&f.atk.ms>=a.hit)resolve(f,o);if(f.atk.ms>=a.dur){f.atk=null;f.cd=120}}
+    if(!f.atk&&f.stun<=0&&!f.block)f.x+=f.dir*f.spd*dt;
+    f.x=Math.max(50,Math.min(610,f.x));
+  }
+  function ai(dt){
+    E.ai-=dt;if(E.atk||E.stun>0)return;
+    const d=E.x-P.x;
+    if(P.atk&&d<125&&!E.block&&Math.random()<dt/E.react*1.5){E.block=true;E.ai=450}
+    if(E.ai>0)return;
+    E.block=false;E.dir=0;
+    const r=Math.random();
+    if(d>105){E.dir=-1;E.ai=250}
+    else if(r<.4){attack(E,'jab');E.ai=E.react*.5}
+    else if(r<.55){attack(E,'hook');E.ai=E.react*.8}
+    else if(r<.75){E.block=true;E.ai=500}
+    else{E.dir=1;E.ai=300}
+  }
+  function loop(now){
+    const dt=Math.min(40,now-last);last=now;
+    if(state==='fight'){
+      P.block=!!(keys.l||keys[' ']||keys.block);
+      P.dir=((keys.arrowright||keys.d||keys.right)?1:0)-((keys.arrowleft||keys.a||keys.left)?1:0);
+      ai(dt);step(P,E,dt,true);step(E,P,dt,false);
+      if(E.x-P.x<70){const m=(E.x+P.x)/2;P.x=m-35;E.x=m+35}
+      if(P.hp<=0||E.hp<=0){
+        const pw=E.hp<=0;wins[pw?0:1]++;
+        if(wins[0]==2||wins[1]==2||round==2&&false){state='title';msg=(wins[0]>wins[1]?'🏆 You win the match!':'💀 You lost the match')+'\nEnter or tap to play again';round=0;wins=[0,0]}
+        else{state='between';round=Math.min(round+1,2);msg=(pw?'KO! You win the round':'You got knocked out')+`\nEnter or tap for round ${round+1}`}
+      }
+    }
+    draw();raf=requestAnimationFrame(loop);
+  }
+  function fighter(f){
+    const shake=f.stun>0?Math.sin(f.stun)*4:0;
+    c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(f.x,285,40,9,0,0,7);c.fill();
+    c.font='84px serif';c.textAlign='center';c.fillText(f.emoji,f.x+shake,265);
+    let ext=0,y=225;
+    if(f.atk){const a=ATK[f.atk.t],p=f.atk.ms/a.dur;ext=Math.sin(Math.min(1,p)*Math.PI)*a.rng*.9;if(f.atk.t==='hook')y=225-Math.sin(p*Math.PI)*25}
+    c.font='36px serif';c.fillText('🥊',f.x+f.face*(38+ext),y+10);
+    if(f.block){c.font='48px serif';c.fillText('🛡️',f.x+f.face*45,240)}
+  }
+  function bar(x,f,label,right){
+    c.fillStyle='#000a';c.fillRect(x,20,250,18);c.fillStyle=f.hp>30?'#4ade80':'#f87171';
+    const w=250*f.hp/100;c.fillRect(right?x+250-w:x,20,w,18);
+    c.fillStyle='#fff';c.font='14px system-ui';c.textAlign=right?'right':'left';c.fillText(label,right?x+250:x,55);
+  }
+  function draw(){
+    c.clearRect(0,0,660,360);
+    c.fillStyle='#3d3470';c.fillRect(0,285,660,75);
+    c.strokeStyle='#ff5c7a';c.lineWidth=4;for(const y of[150,200,250]){c.beginPath();c.moveTo(10,y);c.lineTo(650,y);c.stroke()}
+    if(P){fighter(E);fighter(P);bar(20,P,`You ${'⭐'.repeat(wins[0])}`,false);bar(390,E,`${foes[round][1]} ${'⭐'.repeat(wins[1])}`,true)}
+    if(msg){c.fillStyle='#000a';c.fillRect(0,110,660,110);c.fillStyle='#fff';c.textAlign='center';c.font='bold 26px system-ui';
+      msg.split('\n').forEach((l,i)=>c.fillText(l,330,150+i*36))}
+  }
+  function go(){if(state==='title'){round=0;wins=[0,0];newRound()}else if(state==='between')newRound()}
+  const kd=e=>{const k=e.key.toLowerCase();if([' ','arrowleft','arrowright'].includes(k))e.preventDefault();
+    if(k==='enter')go();if(keys[k])return;keys[k]=true;
+    if(state==='fight'){if(k==='j')attack(P,'jab');if(k==='k')attack(P,'hook')}};
+  const ku=e=>keys[e.key.toLowerCase()]=false;
+  addEventListener('keydown',kd);addEventListener('keyup',ku);
+  cv.addEventListener('pointerdown',go);
+  root.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
+    b.addEventListener('pointerdown',e=>{e.preventDefault();if(state!=='fight'){go();return}
+      if(k==='jab'||k==='hook')attack(P,k);else keys[k]=true});
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{if(k!=='jab'&&k!=='hook')keys[k]=false}))});
+  raf=requestAnimationFrame(loop);
+  return()=>{cancelAnimationFrame(raf);removeEventListener('keydown',kd);removeEventListener('keyup',ku)};
+}
+</script></body></html>
