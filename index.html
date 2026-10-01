@@ -16,7 +16,7 @@ h1{text-align:center;margin:0;padding:28px 12px 8px;font-size:2rem}
 canvas{width:100%;max-width:660px;background:#2b2450;border-radius:12px;touch-action:none}
 .ctl{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
 .ctl button{font-size:1.1rem;padding:14px 18px;border-radius:12px;border:0;background:#ff5c7a;color:#fff;user-select:none;touch-action:none}
-.sel{display:flex;gap:8px;justify-content:center;margin-bottom:8px}.sel button{background:#231f3a;color:#fff;border:2px solid #3a3560;border-radius:12px;padding:6px 10px;font-size:1.8rem;cursor:pointer}.sel button.on{border-color:#ff5c7a;background:#3a2a55}.sel button:disabled{opacity:.5}.sel small{font-size:.65rem}
+.sel{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:8px}.sel button{background:#231f3a;color:#fff;border:2px solid #3a3560;border-radius:12px;padding:6px 10px;font-size:1.8rem;cursor:pointer}.sel button.on{border-color:#ff5c7a;background:#3a2a55}.sel button:disabled{opacity:.5}.sel small{font-size:.65rem}
 .hint{color:#a9a6c4;font-size:.85rem;margin-top:8px}
 </style></head><body>
 <div id="home"><h1>🎮 My Games</h1><div class="sub">Pick a game</div><div id="grid"></div></div>
@@ -41,19 +41,20 @@ addEventListener('hashchange',route);route();
 function startBoxing(root){
   root.innerHTML=`<div class="sel"></div><canvas width="660" height="360"></canvas>
   <div class="ctl"><button data-k="left">◀</button><button data-k="right">▶</button><button data-k="jab">Jab</button><button data-k="hook">Hook</button><button data-k="block">Block</button></div>
-  <div class="hint">Keys: ←/→ or A/D move · J jab · K hook (strong, slow) · L or Space block · Enter start/continue</div>`;
+  <div class="hint">Keys: ←/→ or A/D move · J jab · K hook (strong, slow) · L or Space block · Enter start/continue · beat every monster to be champion</div>`;
   const cv=root.querySelector('canvas'),c=cv.getContext('2d');
-  const R=[{e:'🧌',n:'Grunk',spd:.22,dm:1,rc:1200},{e:'👾',n:'Gloop',spd:.27,dm:.85,rc:1400},{e:'👹',n:'Ogre Ned',spd:.2,dm:1.2,rc:1000},{e:'🐲',n:'Drako',spd:.23,dm:1.35,rc:700}];
-  let vic=null,un=[0],sel=0,foes=[1,2,3],shown='';
-  try{un=JSON.parse(localStorage.getItem('mb_un'))||[0]}catch(e){}
-  const save=()=>{try{localStorage.setItem('mb_un',JSON.stringify(un))}catch(e){}};
+  const R=[{e:'🧌',n:'Grunk',spd:.22,dm:1,rc:1200},{e:'👾',n:'Gloop',spd:.27,dm:.85,rc:1400},{e:'🧟',n:'Zombo',spd:.18,dm:1.1,rc:1250},{e:'👹',n:'Ogre Ned',spd:.2,dm:1.2,rc:1000},{e:'🦖',n:'Rexy',spd:.21,dm:1.3,rc:900},{e:'🐙',n:'Inky',spd:.26,dm:1.1,rc:800},{e:'🐲',n:'Drako',spd:.23,dm:1.35,rc:700},{e:'😈',n:'Devlin',spd:.27,dm:1.4,rc:600}];
+  let vic=null,un=['🧌'],sel=0,foes=[1,2,3,4,5,6,7],shown='';
+  try{const n=localStorage.getItem('mb_un2');if(n)un=JSON.parse(n);else{const o=JSON.parse(localStorage.getItem('mb_un')||'[0]'),old=['🧌','👾','👹','🐲'];un=o.map(i=>old[i]).filter(Boolean)}}catch(e){}
+  const has=i=>un.includes(R[i].e);
+  const save=()=>{try{localStorage.setItem('mb_un2',JSON.stringify(un))}catch(e){}};
   function renderSel(){const s=root.querySelector('.sel');s.style.display=state==='title'?'flex':'none';
-    s.innerHTML=R.map((m,i)=>un.includes(i)?`<button data-i="${i}" class="${i==sel?'on':''}">${m.e}<br><small>${m.n}</small></button>`:`<button disabled>🔒<br><small>???</small></button>`).join('');
+    s.innerHTML=R.map((m,i)=>has(i)?`<button data-i="${i}" class="${i==sel?'on':''}">${m.e}<br><small>${m.n}</small></button>`:`<button disabled>🔒<br><small>???</small></button>`).join('');
     s.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{sel=+b.dataset.i;renderSel()})}
   const ATK={jab:{dur:300,hit:120,rng:95,dmg:6},hook:{dur:600,hit:340,rng:110,dmg:14}};
-  let P,E,round=0,wins=[0,0],state='title',msg='Monster Boxing\nPick your monster, then Enter or tap',keys={},last=performance.now(),raf;
+  let P,E,round=0,state='title',msg='Monster Boxing\nPick your monster, then Enter or tap',keys={},last=performance.now(),raf;
   const mk=(x,face,emoji,spd,dm)=>({x,face,emoji,spd,dm,hp:100,atk:null,stun:0,cd:0,block:false,ai:0,dir:0});
-  function newRound(){const oi=foes[round],f=R[oi],pm=R[sel];P=mk(170,1,pm.e,pm.spd,pm.dm);E=mk(490,-1,f.e,f.spd*.75,f.dm*.85);E.react=f.rc;E.oi=oi;state='fight';msg=`Round ${round+1}: ${f.n}!`;setTimeout(()=>{if(state==='fight')msg=''},1200)}
+  function newRound(){const oi=foes[round],f=R[oi],pm=R[sel];P=mk(170,1,pm.e,pm.spd,pm.dm);E=mk(490,-1,f.e,f.spd*.75,f.dm*.85);E.react=f.rc;E.oi=oi;state='fight';msg=`Level ${round+1}/${foes.length}: ${f.n}!`;setTimeout(()=>{if(state==='fight')msg=''},1200)}
   function attack(f,t){if(f.atk||f.stun>0||f.cd>0||f.block)return;f.atk={t,ms:0,hit:false}}
   function resolve(f,o){
     const a=ATK[f.atk.t];f.atk.hit=true;
@@ -89,11 +90,12 @@ function startBoxing(root){
       ai(dt);step(P,E,dt,true);step(E,P,dt,false);
       if(E.x-P.x<70){const m=(E.x+P.x)/2;P.x=m-35;E.x=m+35}
       if(P.hp<=0||E.hp<=0){
-        const pw=E.hp<=0;wins[pw?0:1]++;let ul='';
-        if(pw&&!un.includes(E.oi)){un.push(E.oi);save();ul=`\n🔓 Unlocked ${R[E.oi].e} ${R[E.oi].n}!`}
-        vic=pw?{oi:E.oi,isNew:ul!=='',final:wins[0]==2}:null;
-        if(wins[0]==2||wins[1]==2){state='title';msg=vic?'':'💀 You lost the match\nEnter or tap to play again';round=0;wins=[0,0]}
-        else{state='between';round=Math.min(round+1,2);msg=pw?'':`You got knocked out\nEnter or tap for round ${round+1}`}
+        const pw=E.hp<=0;let ul='';
+        if(pw&&!has(E.oi)){un.push(R[E.oi].e);save();ul=1}
+        const last=round==foes.length-1;
+        vic=pw?{oi:E.oi,isNew:!!ul,final:last}:null;
+        if(pw&&last){state='title';msg='';round=0}
+        else{state='between';if(pw)round++;msg=pw?'':`You got knocked out\nEnter or tap to retry level ${round+1}`}
       }
     }
     if(state!==shown){shown=state;renderSel()}
@@ -114,10 +116,10 @@ function startBoxing(root){
     c.fillStyle='#fff';c.font='14px system-ui';c.textAlign=right?'right':'left';c.fillText(label,right?x+250:x,55);
   }
   function draw(){
-    c.clearRect(0,0,660,360);
-    c.fillStyle='#3d3470';c.fillRect(0,285,660,75);
+    
+    const lv=P?foes.indexOf(E.oi):0;c.fillStyle=`hsl(${250+lv*18},35%,${24-lv}%)`;c.fillRect(0,0,660,285);c.fillStyle=`hsl(${250+lv*18},30%,32%)`;c.fillRect(0,285,660,75);
     c.strokeStyle='#ff5c7a';c.lineWidth=4;for(const y of[150,200,250]){c.beginPath();c.moveTo(10,y);c.lineTo(650,y);c.stroke()}
-    if(P){fighter(E);fighter(P);bar(20,P,`You ${'⭐'.repeat(wins[0])}`,false);bar(390,E,`${R[foes[round]].n} ${'⭐'.repeat(wins[1])}`,true)}
+    if(P){fighter(E);fighter(P);bar(20,P,'You',false);bar(390,E,`${R[E.oi].n} · Lv ${foes.indexOf(E.oi)+1}/${foes.length}`,true)}
     if(vic)drawVic();
     if(msg){c.fillStyle='#000a';c.fillRect(0,100,660,150);c.fillStyle='#fff';c.textAlign='center';c.font='bold 26px system-ui';
       msg.split('\n').forEach((l,i)=>c.fillText(l,330,145+i*36))}
@@ -130,9 +132,9 @@ function startBoxing(root){
     c.font=`${110+Math.sin(t*4)*6}px serif`;c.fillText(m.e,330,205);
     c.fillStyle='#fff';c.font='bold 24px system-ui';c.fillText(vic.isNew?`🔓 ${m.n} unlocked!`:`${m.n} defeated!`,330,245);
     c.font='16px system-ui';c.fillStyle='#a9a6c4';c.fillText(vic.isNew?'Now playable on the monster select screen':'Already in your roster',330,272);
-    c.fillStyle='#fff';c.fillText(vic.final?'Enter or tap to play again':`Enter or tap for round ${round+1}`,330,320);
+    c.fillStyle='#fff';c.fillText(vic.final?'Enter or tap to play again':`Enter or tap for level ${round+1}`,330,320);
   }
-  function go(){if(state!=='fight')vic=null;if(state==='title'){round=0;wins=[0,0];foes=R.map((_,i)=>i).filter(i=>i!==sel);newRound()}else if(state==='between')newRound()}
+  function go(){if(state!=='fight')vic=null;if(state==='title'){round=0;foes=R.map((_,i)=>i).filter(i=>i!==sel);newRound()}else if(state==='between')newRound()}
   const kd=e=>{const k=e.key.toLowerCase();if([' ','arrowleft','arrowright'].includes(k))e.preventDefault();
     if(k==='enter')go();if(keys[k])return;keys[k]=true;
     if(state==='fight'){if(k==='j')attack(P,'jab');if(k==='k')attack(P,'hook')}};
