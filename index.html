@@ -16,7 +16,7 @@ h1{text-align:center;margin:0;padding:28px 12px 8px;font-size:2rem}
 canvas{width:100%;max-width:660px;background:#2b2450;border-radius:12px;touch-action:none}
 .ctl{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
 .ctl button{font-size:1.1rem;padding:14px 18px;border-radius:12px;border:0;background:#ff5c7a;color:#fff;user-select:none;touch-action:none}
-.sel{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:8px}.sel button{background:#231f3a;color:#fff;border:2px solid #3a3560;border-radius:12px;padding:6px 10px;font-size:1.8rem;cursor:pointer}.sel button.on{border-color:#ff5c7a;background:#3a2a55}.sel button:disabled{opacity:.5}.sel small{font-size:.65rem}
+.sel{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:8px}.sel{max-height:210px;overflow-y:auto}.sel button{background:#231f3a;color:#fff;border:2px solid #3a3560;border-radius:12px;padding:4px 6px;font-size:1.5rem;cursor:pointer}.sel button.on{border-color:#ff5c7a;background:#3a2a55}.sel button:disabled{opacity:.5}.sel small{font-size:.6rem}
 .hint{color:#a9a6c4;font-size:.85rem;margin-top:8px}
 </style></head><body>
 <div id="home"><h1>🎮 My Games</h1><div class="sub">Pick a game</div><div id="grid"></div></div>
@@ -43,7 +43,8 @@ function startBoxing(root){
   <div class="ctl"><button data-k="left">◀</button><button data-k="right">▶</button><button data-k="jab">Jab</button><button data-k="hook">Hook</button><button data-k="block">Block</button></div>
   <div class="hint">Keys: ←/→ or A/D move · J jab · K hook (strong, slow) · L or Space block · Enter start/continue · beat a monster you already own to level it up · each level is best of 3 (best of 5 from level 4)</div>`;
   const cv=root.querySelector('canvas'),c=cv.getContext('2d');
-  const R=[{e:'🧌',n:'Grunk',spd:.22,dm:1,rc:1200},{e:'👾',n:'Gloop',spd:.27,dm:.85,rc:1400},{e:'🧟',n:'Zombo',spd:.18,dm:1.1,rc:1250},{e:'👹',n:'Ogre Ned',spd:.2,dm:1.2,rc:1000},{e:'🦖',n:'Rexy',spd:.21,dm:1.3,rc:900},{e:'🐙',n:'Inky',spd:.26,dm:1.1,rc:800},{e:'🐲',n:'Drako',spd:.23,dm:1.35,rc:700},{e:'😈',n:'Devlin',spd:.27,dm:1.4,rc:600}];
+  const NM=[["🧌", "Grunk"], ["👾", "Gloop"], ["🧟", "Zombo"], ["👻", "Boo"], ["🦠", "Germ"], ["🦞", "Pinchy"], ["🕷️", "Spidra"], ["🦂", "Stinger"], ["👹", "Ogre Ned"], ["🐊", "Chomp"], ["🦍", "Kong"], ["🐘", "Stompy"], ["🦖", "Rexy"], ["🐙", "Inky"], ["🦈", "Jaws"], ["🐗", "Tusk"], ["🦇", "Fang"], ["🤖", "Bolt"], ["👽", "Zorp"], ["🐺", "Wolfgar"], ["🦅", "Talon"], ["🦑", "Kraken"], ["🐍", "Sssnake"], ["🦏", "Rhino"], ["🐻", "Grizz"], ["💀", "Skully"], ["🧛", "Vlad"], ["🐲", "Drako"], ["🐉", "Wyrm"], ["😈", "Devlin"]];
+  const R=NM.map(([e,n],i)=>{const t=i/(NM.length-1),q=i?i%3:2;return{e,n,spd:+(.2+.07*t+(q==0?.04:q==1?-.03:0)).toFixed(3),dm:+(.95+.65*t+(q==0?-.1:q==1?.1:0)).toFixed(2),rc:Math.round(1450-950*t)}});
   let vic=null,un=['🧌'],sel=0,foes=[1,2,3,4,5,6,7],shown='';
   try{const n=localStorage.getItem('mb_un2');if(n)un=JSON.parse(n);else{const o=JSON.parse(localStorage.getItem('mb_un')||'[0]'),old=['🧌','👾','👹','🐲'];un=o.map(i=>old[i]).filter(Boolean)}}catch(e){}
   const has=i=>un.includes(R[i].e);
@@ -146,7 +147,7 @@ o.x+=f.face*(o.block?6:22);
     c.font='16px system-ui';c.fillStyle='#a9a6c4';c.fillText(vic.isNew?'Now playable on the monster select screen':vic.up?'Got a duplicate: stronger and faster when you play as it':'Already max level',330,272);
     c.fillStyle='#fff';c.fillText(vic.final?'Enter or tap to play again':`Enter or tap for level ${round+1}`,330,320);
   }
-  function go(){if(state!=='fight')vic=null;if(state==='title'){round=0;rw=[0,0];rn=1;foes=R.map((_,i)=>i).filter(i=>i!==sel);newRound()}else if(state==='between')newRound()}
+  function go(){if(state!=='fight')vic=null;if(state==='title'){round=0;rw=[0,0];rn=1;const pool=R.map((_,i)=>i).filter(i=>i!==sel),lk=pool.filter(i=>!has(i)),ow=pool.filter(has).sort(()=>Math.random()-.5);foes=lk.slice(0,7).concat(ow).slice(0,7).sort((a,b)=>a-b);newRound()}else if(state==='between')newRound()}
   const kd=e=>{const k=e.key.toLowerCase();if([' ','arrowleft','arrowright'].includes(k))e.preventDefault();
     if(k==='enter')go();if(keys[k])return;keys[k]=true;
     if(state==='fight'){if(k==='j')attack(P,'jab');if(k==='k')attack(P,'hook')}};
